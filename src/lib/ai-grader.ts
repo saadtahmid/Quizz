@@ -29,12 +29,14 @@ export async function autoGradeTextAnswer(
     const { object } = await generateObject({
       model: localAIProvider(modelName),
       schema: z.object({
-        score: z.number().describe(`The strict score awarded out of ${maxPoints} points.`),
-        feedback: z.string().describe("1-2 sentences explaining why this score was given."),
-        isCorrect: z.boolean().describe("True if the answer is fundamentally correct (even if partially awarded points)."),
+        score: z.number().describe(`The strict numeric score awarded (from 0 to ${maxPoints}).`),
+        feedback: z.string().describe("1-2 sentences of professional feedback explaining why this exact score was given."),
+        isCorrect: z.boolean().describe("true if the student's answer is correct or mostly correct, otherwise false."),
       }),
+      temperature: 0,
       prompt: `
-        You are an expert strict academic grader.
+        You are a highly precise strict academic auto-grader.
+        You MUST respond ONLY with a valid JSON object matching the requested schema. Do not include any other text or markdown formatting outside of the JSON object.
         
         Question: "${question}"
         Maximum Points Possible: ${maxPoints}
@@ -43,7 +45,7 @@ export async function autoGradeTextAnswer(
         Task: Analyze the student's answer against the question.
         - Grade it strictly and fairly based ONLY on accuracy.
         - Determine if it is fully correct, partially correct, or incorrect.
-        - Provide a brief feedback explanation for the student.
+        - Provide a brief, professional feedback explanation for the student.
         - Calculate the exact score out of ${maxPoints}.
       `,
     });
