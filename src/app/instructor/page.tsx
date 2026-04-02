@@ -58,9 +58,14 @@ export default async function InstructorDashboard() {
                   <span className="text-xs text-muted-foreground">
                     {quiz.isPublished ? "🟢 Published" : "🟡 Draft"}
                   </span>
-                  <Link href={`/instructor/quizzes/${quiz.id}`}>
-                    <Button variant="secondary" size="sm">Manage</Button>
-                  </Link>
+                  <div className="flex gap-2">
+                    <Link href={`/instructor/quizzes/${quiz.id}/attempts`}>
+                      <Button variant="outline" size="sm">Results</Button>
+                    </Link>
+                    <Link href={`/instructor/quizzes/${quiz.id}`}>
+                      <Button variant="secondary" size="sm">Manage</Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}
