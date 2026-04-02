@@ -1,4 +1,5 @@
-// Removed unused Vercel AI SDK and OpenAI imports
+import { Ollama } from 'ollama';
+
 export async function autoGradeTextAnswer(
   question: string,
   studentAnswer: string,
@@ -15,128 +16,60 @@ export async function autoGradeTextAnswer(
 
   const modelName = process.env.AI_MODEL || 'llama3';
   const baseUrl = process.env.AI_BASE_URL || 'http://localhost:11434';
-  const apiKey = process.env.AI_API_KEY || 'local';
 
-  // We set a strict 30-second timeout so the UI never hangs indefinitely
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const ollama = new Ollama({ host: baseUrl });
+
+  const jsonSchema = {
+    type: "object",
+    properties: {
+      score: {
+        type: "number",
+        description: `The score from 0 to ${maxPoints}`
+      },
+      feedback: {
+        type: "string",
+        description: "1-2 sentences of professional feedback explaining the score"
+      },
+      isCorrect: {
+        type: "boolean",
+        description: "true if the student's answer is mostly/fully correct, otherwise false"
+      }
+    },
+    required: ["score", "feedback", "isCorrect"]
+  };
 
   try {
-    const response = await fetch(`${baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
+    const response = await Promise.race([
+      ollama.chat({
         model: modelName,
-        options: {
-          temperature: 0,
-        },
-        stream: false,
-        format: "json", // Native Ollama JSON formatting
-        think: false, // Turn off thinking trace natively (if supported)
         messages: [
           {
             role: "system",
-            content: `
-              You are a highly precise strict academic auto-grader.
-              You MUST respond ONLY with a valid JSON object. 
-              The JSON object must have exactly these three properties:
-              - "score": a number from 0 to ${maxPoints}
-              - "feedback": a string with 1-2 sentences of professional feedback explaining the score
-              - "isCorrect": a boolean (true if the student's answer is mostly/fully correct, otherwise false)
-            `
+            content: `You are a highly precise strict academic auto-grader. Grade strictly based on accuracy.`
           },
           {
             role: "user",
-            content: `
-              Question: "${question}"
-              Maximum Points Possible: ${maxPoints}
-              Student's Answer: "${studentAnswer}"
-
-              Task: Analyze the student's answer against the question.
-              - Grade it strictly and fairly based ONLY on accuracy.
-              - Determine if it is fully correct, partially correct, or incorrect.
-              - Provide a brief, professional feedback explanation for the student.
-              - Calculate the exact score out of ${maxPoints}.
-            `
+            content: `Question: "${question}"\nMaximum Points Possible: ${maxPoints}\nStudent's Answer: "${studentAnswer}"\n\nTask: Analyze the student's answer against the question. Determine if it is fully correct, partially correct, or incorrect. Calculate the exact score out of ${maxPoints}.`
           }
-        ]
-      })
-    });
+        ],
+        format: jsonSchema as any,
+        options: {
+          temperature: 0
+        }
+      }),
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('AI API timeout')), 30000)
+      )
+    ]);
 
-    clearTimeout(timeoutId);
+    let aiText = response.message?.content || "{}";
 
-    if (!response.ok) {
-      throw new Error(`AI API Error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    
-    // Fallback to openai compat parsing just in case baseUrl wasn't /api
-    let aiText = data.message?.content || data.choices?.[0]?.message?.content || "{}";
-
-    // Aggressively remove <think>...</think> tags which are output by DeepSeek and Qwen reasoning models
+    // Just in case it sneaks in a <think> tag inside the raw content somehow
     aiText = aiText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
     console.log(`[AI_GRADER] Raw AI Text (cleaned):`, aiText);
 
-    let object: any = null;
-    let jsonString = aiText.trim();
-
-    // Aggressive JSON extraction fallback
-    if (jsonString.startsWith('```json')) {
-      jsonString = jsonString.replace(/^```json/, '').replace(/```$/, '').trim();
-    } else if (jsonString.startsWith('```')) {
-      jsonString = jsonString.replace(/^```/, '').replace(/```$/, '').trim();
-    }
-
-    const tryParseAndValidate = (str: string) => {
-      try {
-        const p = JSON.parse(str);
-        if (p && typeof p === 'object') {
-          // Direct match
-          if (p.score !== undefined || p.feedback !== undefined || p.isCorrect !== undefined) {
-            return p;
-          }
-          // Sometimes models nest the answer inside another key (e.g., {"grading": { "score": ... }})
-          for (const key of Object.keys(p)) {
-            if (p[key] && typeof p[key] === 'object') {
-              if (p[key].score !== undefined || p[key].feedback !== undefined) {
-                return p[key];
-              }
-            }
-          }
-        }
-      } catch (e) {
-        return null;
-      }
-      return null;
-    };
-
-    object = tryParseAndValidate(jsonString);
-
-    if (!object) {
-      // Fallback 1: Greedy match for the largest JSON block
-      const greedyMatch = aiText.match(/\{[\s\S]*\}/);
-      if (greedyMatch) {
-        object = tryParseAndValidate(greedyMatch[0]);
-      }
-      
-      // Fallback 2: Non-greedy match (in case of multiple separate blocks)
-      if (!object) {
-        const jsonMatches = aiText.match(/\{[\s\S]*?\}/g) || [];
-        for (const match of jsonMatches) {
-          object = tryParseAndValidate(match);
-          if (object) break;
-        }
-      }
-    }
-
-    if (!object) {
-      throw new Error(`Failed to parse any valid JSON with expected keys from model output. Raw output was: ${aiText}`);
-    }
+    const object = JSON.parse(aiText);
 
     console.log(`[AI_GRADER] Success! Parsed object:`, object);
     
@@ -146,7 +79,6 @@ export async function autoGradeTextAnswer(
       isCorrect: Boolean(object.isCorrect)
     };
   } catch (error) {
-    clearTimeout(timeoutId);
     console.error("[AI_GRADER_ERROR]", error);
     return {
       score: 0,
