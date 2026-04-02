@@ -35,6 +35,8 @@ export async function POST(req: Request, context: { params: Promise<{ attemptId:
           answer.question.points
         );
 
+        console.log(`[AUTO_GRADE] Attempt ${attemptId}, Question ${answer.question.id}:`, aiResult);
+
         await prisma.answer.update({
           where: { id: answer.id },
           data: {

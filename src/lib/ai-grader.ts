@@ -1,4 +1,4 @@
-import { generateObject } from 'ai';
+import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 
@@ -26,18 +26,19 @@ export async function autoGradeTextAnswer(
   }
 
   try {
-    const { object } = await generateObject({
+    const { text } = await generateText({
       model: localAIProvider(modelName),
-      schema: z.object({
-        score: z.number().describe(`The strict numeric score awarded (from 0 to ${maxPoints}).`),
-        feedback: z.string().describe("1-2 sentences of professional feedback explaining why this exact score was given."),
-        isCorrect: z.boolean().describe("true if the student's answer is correct or mostly correct, otherwise false."),
-      }),
       temperature: 0,
-      prompt: `
+      system: `
         You are a highly precise strict academic auto-grader.
-        You MUST respond ONLY with a valid JSON object matching the requested schema. Do not include any other text or markdown formatting outside of the JSON object.
-        
+        You MUST respond ONLY with a valid JSON object representing your grading. 
+        Do not include any markdown formatting like \`\`\`json or \`\`\`. Do not include any conversational text.
+        The JSON object must have exactly these three properties:
+        - "score": a number from 0 to ${maxPoints}
+        - "feedback": a string with 1-2 sentences of professional feedback explaining the score
+        - "isCorrect": a boolean (true if the student's answer is mostly/fully correct, otherwise false)
+      `,
+      prompt: `
         Question: "${question}"
         Maximum Points Possible: ${maxPoints}
         Student's Answer: "${studentAnswer}"
@@ -49,8 +50,28 @@ export async function autoGradeTextAnswer(
         - Calculate the exact score out of ${maxPoints}.
       `,
     });
+    
+    // Attempt to extract JSON if the model added markdown despite our instructions
+    let jsonString = text.trim();
+    if (jsonString.startsWith('```json')) {
+      jsonString = jsonString.replace(/^```json/, '').replace(/```$/, '').trim();
+    } else if (jsonString.startsWith('```')) {
+      jsonString = jsonString.replace(/^```/, '').replace(/```$/, '').trim();
+    }
 
-    return object;
+    const object = JSON.parse(jsonString);
+
+    //print the question, student answer, and raw AI response for debugging
+    console.log(`[AI_GRADER] Question: ${question}`);
+    console.log(`[AI_GRADER] Student Answer: ${studentAnswer}`);
+    console.log(`[AI_GRADER] Model Used: ${modelName}`);
+    console.log(`[AI_GRADER] Raw response from AI:`, object);
+    
+    return {
+      score: Number(object.score) || 0,
+      feedback: String(object.feedback) || "No feedback generated.",
+      isCorrect: Boolean(object.isCorrect)
+    };
   } catch (error) {
     console.error("[AI_GRADER_ERROR]", error);
     // Safe fallback if the local AI isn't running or times out
