@@ -14,7 +14,7 @@ export async function autoGradeTextAnswer(
   }
 
   const modelName = process.env.AI_MODEL || 'llama3';
-  const baseUrl = process.env.AI_BASE_URL || 'http://localhost:11434/v1';
+  const baseUrl = process.env.AI_BASE_URL || 'http://localhost:11434/api';
   const apiKey = process.env.AI_API_KEY || 'local';
 
   // We set a strict 30-second timeout so the UI never hangs indefinitely
@@ -22,18 +22,20 @@ export async function autoGradeTextAnswer(
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
+    const response = await fetch(`${baseUrl}/chat`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Content-Type': 'application/json'
       },
       signal: controller.signal,
       body: JSON.stringify({
         model: modelName,
-        temperature: 0,
-        max_tokens: 500, // Hard stop after 500 tokens to prevent infinite loops
-        response_format: { type: "json_object" }, // Force OpenAI compat endpoints to return JSON
+        options: {
+          temperature: 0,
+        },
+        stream: false,
+        format: "json", // Native Ollama JSON formatting
+        think: false, // Turn off thinking trace natively (if supported)
         messages: [
           {
             role: "system",
@@ -71,7 +73,9 @@ export async function autoGradeTextAnswer(
     }
 
     const data = await response.json();
-    let aiText = data.choices?.[0]?.message?.content || "{}";
+    
+    // Fallback to openai compat parsing just in case baseUrl wasn't /api
+    let aiText = data.message?.content || data.choices?.[0]?.message?.content || "{}";
 
     // Aggressively remove <think>...</think> tags which are output by DeepSeek and Qwen reasoning models
     aiText = aiText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
