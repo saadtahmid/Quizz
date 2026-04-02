@@ -81,40 +81,67 @@ export async function autoGradeTextAnswer(
     }
 
     const data = await response.json();
-    const aiText = data.choices[0]?.message?.content || "{}";
+    const aiText = data.choices?.[0]?.message?.content || "{}";
+
+    console.log(`[AI_GRADER] Raw AI Text:`, aiText);
 
     let object: any = null;
     let jsonString = aiText.trim();
 
-    // Aggressive JSON extraction fallback (in case response_format is ignored by local models)
+    // Aggressive JSON extraction fallback
     if (jsonString.startsWith('```json')) {
       jsonString = jsonString.replace(/^```json/, '').replace(/```$/, '').trim();
     } else if (jsonString.startsWith('```')) {
       jsonString = jsonString.replace(/^```/, '').replace(/```$/, '').trim();
     }
 
-    try {
-      object = JSON.parse(jsonString);
-    } catch (e) {
-      const jsonMatches = aiText.match(/\{[\s\S]*?\}/g);
-      if (jsonMatches) {
-        for (const match of jsonMatches) {
-          try {
-            const parsed = JSON.parse(match);
-            if (parsed && (parsed.score !== undefined || parsed.feedback !== undefined || parsed.isCorrect !== undefined)) {
-              object = parsed;
-              break;
+    const tryParseAndValidate = (str: string) => {
+      try {
+        const p = JSON.parse(str);
+        if (p && typeof p === 'object') {
+          // Direct match
+          if (p.score !== undefined || p.feedback !== undefined || p.isCorrect !== undefined) {
+            return p;
+          }
+          // Sometimes models nest the answer inside another key (e.g., {"grading": { "score": ... }})
+          for (const key of Object.keys(p)) {
+            if (p[key] && typeof p[key] === 'object') {
+              if (p[key].score !== undefined || p[key].feedback !== undefined) {
+                return p[key];
+              }
             }
-          } catch (err) { /* ignore */ }
+          }
+        }
+      } catch (e) {
+        return null;
+      }
+      return null;
+    };
+
+    object = tryParseAndValidate(jsonString);
+
+    if (!object) {
+      // Fallback 1: Greedy match for the largest JSON block
+      const greedyMatch = aiText.match(/\{[\s\S]*\}/);
+      if (greedyMatch) {
+        object = tryParseAndValidate(greedyMatch[0]);
+      }
+      
+      // Fallback 2: Non-greedy match (in case of multiple separate blocks)
+      if (!object) {
+        const jsonMatches = aiText.match(/\{[\s\S]*?\}/g) || [];
+        for (const match of jsonMatches) {
+          object = tryParseAndValidate(match);
+          if (object) break;
         }
       }
     }
 
     if (!object) {
-      throw new Error(`Failed to parse any valid JSON from model output. Raw output was: ${aiText}`);
+      throw new Error(`Failed to parse any valid JSON with expected keys from model output. Raw output was: ${aiText}`);
     }
 
-    console.log(`[AI_GRADER] Success! Given score: ${object.score}`);
+    console.log(`[AI_GRADER] Success! Parsed object:`, object);
     
     return {
       score: Number(object.score) || 0,
