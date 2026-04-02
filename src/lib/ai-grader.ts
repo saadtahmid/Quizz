@@ -51,22 +51,41 @@ export async function autoGradeTextAnswer(
       `,
     });
     
-    // Attempt to extract JSON if the model added markdown despite our instructions
+    let object: any = null;
     let jsonString = text.trim();
-    // Sometimes the model outputs thought process before the JSON (e.g. reasoning models)
-    // We can try to extract just the first { ... } block
-    const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      jsonString = jsonMatch[0];
-    } else {
-      if (jsonString.startsWith('```json')) {
-        jsonString = jsonString.replace(/^```json/, '').replace(/```$/, '').trim();
-      } else if (jsonString.startsWith('```')) {
-        jsonString = jsonString.replace(/^```/, '').replace(/```$/, '').trim();
+
+    // 1. First, try to just parse the whole thing (in case it's pure JSON)
+    if (jsonString.startsWith('```json')) {
+      jsonString = jsonString.replace(/^```json/, '').replace(/```$/, '').trim();
+    } else if (jsonString.startsWith('```')) {
+      jsonString = jsonString.replace(/^```/, '').replace(/```$/, '').trim();
+    }
+
+    try {
+      object = JSON.parse(jsonString);
+    } catch (e) {
+      // 2. If it fails, the model might have output conversational text or <think> tags.
+      // Use a regex to find all potential JSON objects { ... } and try to parse them
+      const jsonMatches = text.match(/\{[\s\S]*?\}/g);
+      if (jsonMatches) {
+        for (const match of jsonMatches) {
+          try {
+            const parsed = JSON.parse(match);
+            // Verify it has at least one of our expected keys
+            if (parsed && (parsed.score !== undefined || parsed.feedback !== undefined || parsed.isCorrect !== undefined)) {
+              object = parsed;
+              break; // Found a valid JSON object matching our schema
+            }
+          } catch (err) {
+            // Not a valid JSON block, try the next one
+          }
+        }
       }
     }
 
-    const object = JSON.parse(jsonString);
+    if (!object) {
+      throw new Error(`Failed to parse any valid JSON from model output. Raw output was: ${text}`);
+    }
 
     //print the question, student answer, and raw AI response for debugging
     console.log(`[AI_GRADER] Question: ${question}`);
