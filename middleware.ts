@@ -8,6 +8,7 @@ export default auth((req) => {
   const isOnAuthPage = req.nextUrl.pathname.startsWith('/auth')
   const isInstructorRoute = req.nextUrl.pathname.startsWith('/instructor')
   const isStudentRoute = req.nextUrl.pathname.startsWith('/student')
+  const isHome = req.nextUrl.pathname === '/'
   
   if (isOnAuthPage) {
     if (isLoggedIn) {
@@ -26,6 +27,10 @@ export default auth((req) => {
     // Redirect based on role
     const role = req.auth?.user?.role;
     
+    if (isHome) {
+      return Response.redirect(new URL(role === 'INSTRUCTOR' ? '/instructor' : '/student', req.nextUrl))
+    }
+
     if (isInstructorRoute && role !== 'INSTRUCTOR') {
       return Response.redirect(new URL('/student', req.nextUrl))
     }
