@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(STUDENT)
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  quizzes   Quiz[]   @relation("InstructorQuizzes")
+  attempts  Attempt[]
+}
+
+enum Role {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+}
+
+model Quiz {
+  id           String     @id @default(uuid())
+  title        String
+  description  String?
+  isPublished  Boolean    @default(false)
+  instructorId String
+  instructor   User       @relation("InstructorQuizzes", fields: [instructorId], references: [id], onDelete: Cascade)
+  questions    Question[]
+  attempts     Attempt[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Question {
+  id          String   @id @default(uuid())
+  quizId      String
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  content     String   // The actual question text, potentially containing LaTeX
+  type        QuestionType @default(MCQ)
+  points      Int      @default(1)
+  mathEnabled Boolean  @default(false)
+  options     Option[]
+  answers     Answer[]
+  order       Int      @default(0) // order of the question within the quiz
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum QuestionType {
+  MCQ
+  TEXT
+}
+
+model Option {
+  id          String   @id @default(uuid())
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text        String
+  isCorrect   Boolean  @default(false)
+  mathEnabled Boolean  @default(false)
+  answers     Answer[]
+}
+
+model Attempt {
+  id          String   @id @default(uuid())
+  quizId      String
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  startTime   DateTime @default(now())
+  endTime     DateTime?
+  score       Float?
+  status      AttemptStatus @default(IN_PROGRESS)
+  answers     Answer[]
+  proctorLogs ProctorLog[]
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+}
+
+model Answer {
+  id               String   @id @default(uuid())
+  attemptId        String
+  attempt          Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId       String
+  question         Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOptionId String?
+  selectedOption   Option?  @relation(fields: [selectedOptionId], references: [id])
+  textAnswer       String?
+  isCorrect        Boolean?
+  manualScore      Float?
+  createdAt        DateTime @default(now())
+}
+
+model ProctorLog {
+  id        String   @id @default(uuid())
+  attemptId String
+  attempt   Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  eventType ProctorEventType
+  timestamp DateTime @default(now())
+  details   String?
+}
+
+enum ProctorEventType {
+  TAB_SWITCH
+  BLUR
+  FOCUS_LOST
+  OTHER
+}
