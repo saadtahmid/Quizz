@@ -25,7 +25,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
     if (!quiz) return new NextResponse("Quiz not found", { status: 404 });
 
-    // Calculate score
+    // Calculate score for MCQ only, TEXT is pending evaluation
     let totalScore = 0;
     const answerRecords = [];
 
@@ -49,13 +49,14 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
         });
         totalScore += pointsAwarded;
       } else {
-        // TEXT answer, auto-grade not MVP, defaults to 0 points pending manual review
+        // TEXT answer, auto-grade is delayed until instructor initiates it
         answerRecords.push({
           questionId: q.id,
           selectedOptionId: null,
           textAnswer: studentAnswer || "",
           isCorrect: null,
-          manualScore: null
+          manualScore: null,
+          aiFeedback: null
         });
       }
     }
@@ -81,7 +82,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       }
     });
 
-    return NextResponse.json({ success: true, attemptId: attempt.id, score: totalScore });
+    return NextResponse.json({ success: true, attemptId: attempt.id });
   } catch (error) {
     console.error("[STUDENT_QUIZ_SUBMIT]", error);
     return new NextResponse("Internal Error", { status: 500 });

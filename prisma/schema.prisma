@@ -98,6 +98,7 @@ model Answer {
   textAnswer       String?
   isCorrect        Boolean?
   manualScore      Float?
+  aiFeedback       String?  // Feedback provided by the Local AI Grader
   createdAt        DateTime @default(now())
 }
 

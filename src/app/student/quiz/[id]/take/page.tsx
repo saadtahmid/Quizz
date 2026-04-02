@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import 'katex/dist/katex.min.css'
-import { InlineMath, BlockMath } from 'react-katex'
+import { MathText } from "@/components/ui/math-text"
 
 type ProctorEvent = {
   type: string;
@@ -152,7 +151,7 @@ export default function TakeExamPage() {
             <CardContent>
               <div className="mb-6 text-lg">
                 {q.mathEnabled ? (
-                  <BlockMath math={q.content} errorColor={'#cc0000'} />
+                  <MathText content={q.content} />
                 ) : (
                   <p>{q.content}</p>
                 )}
@@ -169,7 +168,7 @@ export default function TakeExamPage() {
                       <RadioGroupItem value={o.id} id={o.id} className="mt-1" />
                       <Label htmlFor={o.id} className="font-normal text-base w-full cursor-pointer leading-snug">
                         {o.mathEnabled ? (
-                          <InlineMath math={o.text} errorColor={'#cc0000'} />
+                          <MathText content={o.text} />
                         ) : (
                           o.text
                         )}

@@ -51,13 +51,17 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
     const body = await req.json();
     const { title, description, isPublished, questions } = body;
 
-    // Verify ownership
+    // Verify ownership and check if already published
     const quizOwner = await prisma.quiz.findUnique({
       where: { id: id, instructorId: session.user.id }
     });
 
     if (!quizOwner) {
       return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    if (quizOwner.isPublished) {
+      return new NextResponse("Quiz is published and immutable. Please clone it to make changes.", { status: 400 });
     }
 
     // Use a transaction to delete existing questions and re-insert them

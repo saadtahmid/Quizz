@@ -2,6 +2,7 @@ import { auth, signOut } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import prisma from "@/lib/prisma"
+import { revalidatePath } from "next/cache"
 
 export default async function InstructorDashboard() {
   const session = await auth()
@@ -40,10 +41,16 @@ export default async function InstructorDashboard() {
         </div>
         
         {quizzes.length === 0 ? (
-          <div className="p-8 text-center border rounded-lg bg-muted/20">
-            <p className="text-muted-foreground mb-4">You haven&apos;t created any quizzes yet.</p>
+          <div className="flex flex-col items-center justify-center p-12 text-center border rounded-lg bg-muted/20 border-dashed">
+            <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+              <span className="text-4xl">📚</span>
+            </div>
+            <h3 className="text-xl font-semibold mb-2">No quizzes yet</h3>
+            <p className="text-muted-foreground mb-6 max-w-sm">
+              You haven&apos;t created any quizzes. Get started by creating your first exam to test your students&apos; knowledge.
+            </p>
             <Link href="/instructor/quizzes/new">
-              <Button variant="outline">Create your first quiz</Button>
+              <Button size="lg">Create your first quiz</Button>
             </Link>
           </div>
         ) : (
@@ -59,6 +66,13 @@ export default async function InstructorDashboard() {
                     {quiz.isPublished ? "🟢 Published" : "🟡 Draft"}
                   </span>
                   <div className="flex gap-2">
+                    <form action={async () => {
+                      "use server"
+                      await prisma.quiz.delete({ where: { id: quiz.id } })
+                      revalidatePath('/instructor')
+                    }}>
+                      <Button variant="ghost" size="sm" type="submit" className="text-destructive hover:bg-destructive/10">Delete</Button>
+                    </form>
                     <Link href={`/instructor/quizzes/${quiz.id}/attempts`}>
                       <Button variant="outline" size="sm">Results</Button>
                     </Link>

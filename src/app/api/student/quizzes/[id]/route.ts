@@ -11,6 +11,20 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   }
 
   try {
+    // Fetch all existing attempts
+    const existingAttempts = await prisma.attempt.findMany({
+      where: {
+        quizId: id,
+        studentId: session.user.id
+      },
+      include: {
+        answers: true
+      },
+      orderBy: {
+        startTime: 'desc'
+      }
+    });
+
     const quiz = await prisma.quiz.findUnique({
       where: {
         id: id,
@@ -32,7 +46,19 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
       return new NextResponse("Not Found or Not Published", { status: 404 });
     }
 
-    // Strip sensitive information like `isCorrect` from options before sending to client!
+    // If the student already attempted, we return the past attempts (including correct answers)
+    if (existingAttempts.length > 0) {
+      const reviewQuiz = {
+        id: quiz.id,
+        title: quiz.title,
+        description: quiz.description,
+        questions: quiz.questions, // Unsanitized: includes correct answers!
+        attempts: existingAttempts
+      };
+      return NextResponse.json(reviewQuiz);
+    }
+
+    // If NOT attempted, strip sensitive information like `isCorrect` from options before sending to client!
     const sanitizedQuestions = quiz.questions.map(q => {
       // Basic algorithmic security: Randomize option order
       const shuffledOptions = q.options
@@ -60,7 +86,8 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
       id: quiz.id,
       title: quiz.title,
       description: quiz.description,
-      questions: shuffledQuestions
+      questions: shuffledQuestions,
+      attempts: []
     };
 
     return NextResponse.json(sanitizedQuiz);
