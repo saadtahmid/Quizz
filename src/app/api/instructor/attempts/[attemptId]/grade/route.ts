@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { autoGradeTextAnswer } from "@/lib/ai-grader";
 
 export async function POST(req: Request, context: { params: Promise<{ attemptId: string }> }) {
   const session = await auth();
@@ -12,6 +11,16 @@ export async function POST(req: Request, context: { params: Promise<{ attemptId:
   }
 
   try {
+    // Read optional scores from the manual grading UI
+    // Example: { scores: { "answer-id-1": 10, "answer-id-2": 5 } }
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch (e) {
+      // Ignore empty body
+    }
+    const scores = body?.scores || {};
+
     const attempt = await prisma.attempt.findUnique({
       where: { id: attemptId },
       include: {
@@ -26,32 +35,34 @@ export async function POST(req: Request, context: { params: Promise<{ attemptId:
 
     let additionalScore = 0;
 
-    // Loop through all text questions that have not been scored yet
+    // Process manually provided text question scores
     for (const answer of attempt.answers) {
-      if (answer.question.type === "TEXT" && answer.manualScore === null) {
-        const aiResult = await autoGradeTextAnswer(
-          answer.question.content,
-          answer.textAnswer || "",
-          answer.question.points
-        );
-
-        console.log(`[AUTO_GRADE] Attempt ${attemptId}, Question ${answer.question.id}:`, aiResult);
-
-        await prisma.answer.update({
-          where: { id: answer.id },
-          data: {
-            isCorrect: aiResult.isCorrect,
-            manualScore: aiResult.score,
-            aiFeedback: aiResult.feedback
-          }
-        });
-
-        additionalScore += aiResult.score;
+      if (answer.question.type === "TEXT") {
+        const providedScore = scores[answer.id];
+        
+        if (typeof providedScore === "number") {
+          await prisma.answer.update({
+            where: { id: answer.id },
+            data: {
+              isCorrect: providedScore > 0 && providedScore === answer.question.points,
+              manualScore: providedScore,
+              aiFeedback: null // clear out any old AI feedback just in case
+            }
+          });
+          additionalScore += providedScore;
+        } else if (answer.manualScore !== null) {
+          // Carry over any existing score if not updated
+          additionalScore += answer.manualScore;
+        }
       }
     }
 
-    // Update the attempt's total score and mark it as completely graded
-    const finalScore = (attempt.score || 0) + additionalScore;
+    // Calculate final score
+    const mcqScore = attempt.answers
+      .filter((a) => a.question.type === "MCQ")
+      .reduce((acc, a) => acc + (a.manualScore || 0), 0);
+
+    const finalScore = mcqScore + additionalScore;
 
     const updatedAttempt = await prisma.attempt.update({
       where: { id: attemptId },
