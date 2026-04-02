@@ -2,11 +2,8 @@ import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { MathText } from "@/components/ui/math-text"
-import GradeButton from "./GradeButton"
+import AttemptReviewClient from "./AttemptReviewClient"
 
 export default async function AttemptDetailsPage({ 
   params 
@@ -60,9 +57,6 @@ export default async function AttemptDetailsPage({
             </Link>
             <h1 className="text-3xl font-bold">Attempt Details</h1>
           </div>
-          {attempt.status === "SUBMITTED" && (
-            <GradeButton attemptId={attemptId} />
-          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -106,80 +100,8 @@ export default async function AttemptDetailsPage({
         </Card>
       </div>
 
-      <h2 className="text-2xl font-bold mb-6">Student Answers</h2>
-      <div className="flex flex-col gap-6">
-        {attempt.quiz.questions.map((question, idx) => {
-          const studentAnswer = attempt.answers.find(a => a.questionId === question.id);
-          
-          return (
-            <Card key={question.id}>
-              <CardHeader className="border-b bg-muted/30">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">Question {idx + 1}</CardTitle>
-                  <div>
-                    {studentAnswer?.isCorrect === true && <Badge className="bg-green-600">Correct</Badge>}
-                    {studentAnswer?.isCorrect === false && <Badge variant="destructive">Incorrect</Badge>}
-                    {studentAnswer?.isCorrect === null && <Badge variant="secondary">Needs Review</Badge>}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="mb-6 text-lg">
-                  {question.mathEnabled ? (
-                    <MathText content={question.content} />
-                  ) : (
-                    <p>{question.content}</p>
-                  )}
-                </div>
-
-                {question.type === "MCQ" ? (
-                  <div className="space-y-3">
-                    {question.options.map(opt => {
-                      const isSelected = studentAnswer?.selectedOptionId === opt.id;
-                      let bgClass = "bg-background";
-                      let borderClass = "border-border";
-                      
-                      if (opt.isCorrect) {
-                        bgClass = "bg-green-50 dark:bg-green-950/30";
-                        borderClass = "border-green-500";
-                      } else if (isSelected && !opt.isCorrect) {
-                        bgClass = "bg-red-50 dark:bg-red-950/30";
-                        borderClass = "border-red-500";
-                      }
-
-                      return (
-                        <div key={opt.id} className={`p-4 border rounded-md flex items-center gap-3 ${bgClass} ${borderClass}`}>
-                          <div className={`w-4 h-4 rounded-full border flex-shrink-0 flex items-center justify-center ${isSelected ? 'border-primary' : 'border-muted-foreground'}`}>
-                            {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-                          </div>
-                          <div className="w-full">
-                            {opt.mathEnabled ? <MathText content={opt.text} /> : opt.text}
-                          </div>
-                          {opt.isCorrect && <Badge variant="outline" className="ml-auto text-green-600 border-green-600 flex-shrink-0">Correct Answer</Badge>}
-                          {isSelected && !opt.isCorrect && <Badge variant="outline" className="ml-auto text-destructive border-destructive flex-shrink-0">Student Answer</Badge>}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div>
-                    <div className="text-sm font-semibold mb-2">Student&apos;s Response:</div>
-                    <div className="p-4 bg-muted/50 rounded-md whitespace-pre-wrap border">
-                      {studentAnswer?.textAnswer || <span className="text-muted-foreground italic">No answer provided</span>}
-                    </div>
-                    {studentAnswer?.aiFeedback && (
-                      <div className="mt-4 p-4 rounded-md border bg-blue-500/10 border-blue-500/20">
-                        <div className="text-sm font-semibold mb-2 text-blue-900 dark:text-blue-200">AI Grader Feedback:</div>
-                        <div className="text-blue-900 dark:text-blue-200">{studentAnswer.aiFeedback}</div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+      {/* Manual Grading and Review Client Component */}
+      <AttemptReviewClient attempt={attempt} />
     </div>
   )
 }
