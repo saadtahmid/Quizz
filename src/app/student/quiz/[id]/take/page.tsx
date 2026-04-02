@@ -155,7 +155,7 @@ export default function TakeExamPage() {
       <div className="flex justify-between items-center mb-8 border-b pb-4">
         <div>
           <h1 className="text-3xl font-bold">{quiz.title}</h1>
-          {quiz.description && <p className="text-muted-foreground mt-2">{quiz.description}</p>}
+          {quiz.description && <p className=" mt-2 text-destructive">{quiz.description}</p>}
         </div>
         <div className="text-right flex flex-col items-end gap-2">
           {timeLeft !== null && (

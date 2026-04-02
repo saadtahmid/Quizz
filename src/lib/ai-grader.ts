@@ -28,7 +28,6 @@ export async function autoGradeTextAnswer(
   try {
     const { object } = await generateObject({
       model: localAIProvider(modelName),
-      system: "You are a strictly constrained API. You MUST output ONLY valid JSON. DO NOT use <think> tags. DO NOT output any reasoning, chain-of-thought, or conversational text. Return the JSON object immediately.",
       schema: z.object({
         score: z.number().describe(`The strict score awarded out of ${maxPoints} points.`),
         feedback: z.string().describe("1-2 sentences explaining why this score was given."),
