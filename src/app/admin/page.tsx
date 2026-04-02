@@ -1,6 +1,7 @@
 import { auth, signOut } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import prisma from "@/lib/prisma"
+import Link from "next/link"
 import {
   Table,
   TableBody,
@@ -40,6 +41,9 @@ export default async function AdminDashboard() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <div className="flex items-center gap-4">
+          <Link href="/instructor">
+            <Button variant="secondary">Go to Instructor Dashboard</Button>
+          </Link>
           <span>Welcome, {session?.user?.name || session?.user?.email}</span>
           <form action={async () => {
             "use server"

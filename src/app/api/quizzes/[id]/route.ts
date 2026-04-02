@@ -6,7 +6,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   const session = await auth();
   const { id } = await context.params;
 
-  if (!session || session.user.role !== "INSTRUCTOR") {
+  if (!session || (session.user.role !== "INSTRUCTOR" && session.user.role !== "ADMIN")) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -43,7 +43,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
   const session = await auth();
   const { id } = await context.params;
 
-  if (!session || session.user.role !== "INSTRUCTOR") {
+  if (!session || (session.user.role !== "INSTRUCTOR" && session.user.role !== "ADMIN")) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -107,7 +107,7 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
   const session = await auth();
   const { id } = await context.params;
 
-  if (!session || session.user.role !== "INSTRUCTOR") {
+  if (!session || (session.user.role !== "INSTRUCTOR" && session.user.role !== "ADMIN")) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

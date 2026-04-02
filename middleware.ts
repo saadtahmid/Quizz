@@ -38,11 +38,11 @@ export default auth((req) => {
       return Response.redirect(new URL(role === 'INSTRUCTOR' ? '/instructor' : '/student', req.nextUrl))
     }
 
-    if (isInstructorRoute && role !== 'INSTRUCTOR') {
+    if (isInstructorRoute && role !== 'INSTRUCTOR' && role !== 'ADMIN') {
       return Response.redirect(new URL(role === 'ADMIN' ? '/admin' : '/student', req.nextUrl))
     }
     
-    if (isStudentRoute && role !== 'STUDENT') {
+    if (isStudentRoute && role !== 'STUDENT' && role !== 'ADMIN') {
       return Response.redirect(new URL(role === 'ADMIN' ? '/admin' : '/instructor', req.nextUrl))
     }
   }

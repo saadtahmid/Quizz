@@ -16,6 +16,11 @@ export default async function InstructorDashboard() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Instructor Dashboard</h1>
         <div className="flex items-center gap-4">
+          {session?.user?.role === "ADMIN" && (
+            <Link href="/admin">
+              <Button variant="secondary">Go to Admin Dashboard</Button>
+            </Link>
+          )}
           <span>Welcome, {session?.user?.name || session?.user?.email}</span>
           <form action={async () => {
             "use server"
