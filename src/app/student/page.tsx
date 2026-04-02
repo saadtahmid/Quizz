@@ -20,9 +20,9 @@ export default async function StudentDashboard() {
           <span>Welcome, {session?.user?.name || session?.user?.email}</span>
           <form action={async () => {
             "use server"
-            await signOut()
+            await signOut({ redirectTo: "/" })
           }}>
-            <Button variant="outline">Sign Out</Button>
+            <Button type="submit" variant="outline">Sign Out</Button>
           </form>
         </div>
       </div>
