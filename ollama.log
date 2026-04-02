@@ -59,3 +59,5 @@ time=2026-04-03T02:20:46.531+06:00 level=INFO source=server.go:1568 msg="abortin
 [GIN] 2026/04/03 - 02:26:16 | 200 |  125.782708ms |       127.0.0.1 | POST     "/api/generate"
 [GIN] 2026/04/03 - 02:26:26 | 200 |  7.994669735s |       127.0.0.1 | POST     "/api/chat"
 [GIN] 2026/04/03 - 02:27:42 | 200 | 16.397173893s |       127.0.0.1 | POST     "/api/chat"
+ggml_backend_cuda_device_get_memory device GPU-f4a654e7-c105-5aa3-4ee9-5eaa98e083fa utilizing NVML memory reporting free: 7747731456 total: 17103323136
+time=2026-04-03T02:32:46.191+06:00 level=INFO source=server.go:430 msg="starting runner" cmd="/usr/local/bin/ollama runner --ollama-engine --port 43969"

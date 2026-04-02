@@ -1,14 +1,4 @@
-import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-import { z } from 'zod';
-
-// We create a custom provider that points to our local AI!
-// Ollama has a built-in OpenAI compatible endpoint at /v1.
-const localAIProvider = createOpenAI({
-  baseURL: process.env.AI_BASE_URL || 'http://localhost:11434/v1',
-  apiKey: process.env.AI_API_KEY || 'local', // Any string works for Ollama
-});
-
+// Removed unused Vercel AI SDK and OpenAI imports
 export async function autoGradeTextAnswer(
   question: string,
   studentAnswer: string,
@@ -81,9 +71,12 @@ export async function autoGradeTextAnswer(
     }
 
     const data = await response.json();
-    const aiText = data.choices?.[0]?.message?.content || "{}";
+    let aiText = data.choices?.[0]?.message?.content || "{}";
 
-    console.log(`[AI_GRADER] Raw AI Text:`, aiText);
+    // Aggressively remove <think>...</think> tags which are output by DeepSeek and Qwen reasoning models
+    aiText = aiText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+    console.log(`[AI_GRADER] Raw AI Text (cleaned):`, aiText);
 
     let object: any = null;
     let jsonString = aiText.trim();
