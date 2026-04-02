@@ -53,10 +53,17 @@ export async function autoGradeTextAnswer(
     
     // Attempt to extract JSON if the model added markdown despite our instructions
     let jsonString = text.trim();
-    if (jsonString.startsWith('```json')) {
-      jsonString = jsonString.replace(/^```json/, '').replace(/```$/, '').trim();
-    } else if (jsonString.startsWith('```')) {
-      jsonString = jsonString.replace(/^```/, '').replace(/```$/, '').trim();
+    // Sometimes the model outputs thought process before the JSON (e.g. reasoning models)
+    // We can try to extract just the first { ... } block
+    const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonString = jsonMatch[0];
+    } else {
+      if (jsonString.startsWith('```json')) {
+        jsonString = jsonString.replace(/^```json/, '').replace(/```$/, '').trim();
+      } else if (jsonString.startsWith('```')) {
+        jsonString = jsonString.replace(/^```/, '').replace(/```$/, '').trim();
+      }
     }
 
     const object = JSON.parse(jsonString);
