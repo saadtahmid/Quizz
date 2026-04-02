@@ -28,6 +28,7 @@ model Quiz {
   id           String     @id @default(uuid())
   title        String
   description  String?
+  timeLimit    Int?       // Optional time limit in minutes
   isPublished  Boolean    @default(false)
   instructorId String
   instructor   User       @relation("InstructorQuizzes", fields: [instructorId], references: [id], onDelete: Cascade)

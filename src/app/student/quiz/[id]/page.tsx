@@ -202,7 +202,7 @@ export default function StudentQuizPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-8 text-center mt-20">
-      <h1 className="text-3xl font-bold mb-4">Exam Ready</h1>
+      <h1 className="text-3xl font-bold mb-4">Exam Ready: {quizData?.title}</h1>
       <p className="text-muted-foreground mb-8">
         You are about to start the exam. Ensure you are in a quiet environment. <br />
         <span className="font-semibold text-destructive">
@@ -210,6 +210,13 @@ export default function StudentQuizPage() {
         </span>
       </p>
       
+      {quizData?.timeLimit && (
+        <div className="mb-8 p-4 bg-orange-50 border border-orange-200 text-orange-800 rounded-lg inline-block">
+          <p className="font-bold text-lg">⏳ Time Limit: {quizData.timeLimit} Minutes</p>
+          <p className="text-sm">The exam will automatically submit when the timer runs out.</p>
+        </div>
+      )}
+
       <div className="flex justify-center gap-4">
         <Button variant="outline" onClick={() => router.push("/student")}>
           Cancel

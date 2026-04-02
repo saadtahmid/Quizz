@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { title, description } = await req.json();
+    const { title, description, timeLimit } = await req.json();
 
     if (!title) {
       return new NextResponse("Missing title", { status: 400 });
@@ -40,6 +40,7 @@ export async function POST(req: Request) {
       data: {
         title,
         description,
+        timeLimit: timeLimit ? parseInt(timeLimit) : null,
         instructorId: session.user.id,
       }
     });

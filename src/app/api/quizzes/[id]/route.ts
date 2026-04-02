@@ -49,7 +49,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
 
   try {
     const body = await req.json();
-    const { title, description, isPublished, questions } = body;
+    const { title, description, isPublished, questions, timeLimit } = body;
 
     // Verify ownership and check if already published
     const quizOwner = await prisma.quiz.findUnique({
@@ -79,6 +79,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
         data: {
           title,
           description,
+          timeLimit: timeLimit ? parseInt(timeLimit) : null,
           isPublished,
           questions: {
             create: questions.map((q: any, index: number) => ({

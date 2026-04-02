@@ -38,6 +38,7 @@ export default function QuizEditorPage() {
   const [questions, setQuestions] = useState<QuestionType[]>([])
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [timeLimit, setTimeLimit] = useState<number | "">("")
   const [isPublished, setIsPublished] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -53,6 +54,7 @@ export default function QuizEditorPage() {
         
         setTitle(data.title)
         setDescription(data.description || "")
+        setTimeLimit(data.timeLimit || "")
         setIsPublished(data.isPublished)
         setQuestions(data.questions || [])
       } catch (error) {
@@ -74,6 +76,7 @@ export default function QuizEditorPage() {
         body: JSON.stringify({
           title,
           description,
+          timeLimit: timeLimit === "" ? null : timeLimit,
           isPublished: publishState,
           questions
         })
@@ -287,9 +290,22 @@ export default function QuizEditorPage() {
           <CardTitle>Quiz Details</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div>
-            <Label>Title</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} disabled={isPublished} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Title</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} disabled={isPublished} />
+            </div>
+            <div>
+              <Label>Time Limit (minutes)</Label>
+              <Input 
+                type="number" 
+                min={1} 
+                placeholder="Leave empty for no limit"
+                value={timeLimit} 
+                onChange={(e) => setTimeLimit(e.target.value ? parseInt(e.target.value) : "")} 
+                disabled={isPublished} 
+              />
+            </div>
           </div>
           <div>
             <Label>Description</Label>

@@ -52,6 +52,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
         id: quiz.id,
         title: quiz.title,
         description: quiz.description,
+        timeLimit: quiz.timeLimit,
         questions: quiz.questions, // Unsanitized: includes correct answers!
         attempts: existingAttempts
       };
@@ -86,6 +87,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
       id: quiz.id,
       title: quiz.title,
       description: quiz.description,
+      timeLimit: quiz.timeLimit,
       questions: shuffledQuestions,
       attempts: []
     };

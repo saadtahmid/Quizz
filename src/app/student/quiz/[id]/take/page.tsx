@@ -25,6 +25,7 @@ export default function TakeExamPage() {
   const [submitting, setSubmitting] = useState(false)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [proctorEvents, setProctorEvents] = useState<ProctorEvent[]>([])
+  const [timeLeft, setTimeLeft] = useState<number | null>(null)
 
   // Proctoring setup
   useEffect(() => {
@@ -74,6 +75,9 @@ export default function TakeExamPage() {
         if (!res.ok) throw new Error("Failed to fetch")
         const data = await res.json()
         setQuiz(data)
+        if (data.timeLimit) {
+          setTimeLeft(data.timeLimit * 60) // Convert minutes to seconds
+        }
       } catch (error) {
         console.error(error)
         alert("Failed to load quiz or it is not available.")
@@ -85,15 +89,8 @@ export default function TakeExamPage() {
     if (quizId) fetchQuiz()
   }, [quizId, router])
 
-  const handleAnswerChange = (questionId: string, value: string) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: value
-    }))
-  }
-
-  const handleSubmit = async () => {
-    if (!confirm("Are you sure you want to submit your exam? You cannot undo this action.")) return;
+  const handleSubmit = useCallback(async (isAutoSubmit = false) => {
+    if (!isAutoSubmit && !confirm("Are you sure you want to submit your exam? You cannot undo this action.")) return;
     setSubmitting(true)
     
     try {
@@ -106,14 +103,45 @@ export default function TakeExamPage() {
       if (!res.ok) throw new Error("Failed to submit")
       const data = await res.json()
 
-      alert(`Exam submitted successfully! Score: ${data.score}`);
+      alert(isAutoSubmit ? `Time's up! Exam auto-submitted. Score: ${data.score}` : `Exam submitted successfully! Score: ${data.score}`);
       router.push("/student")
     } catch (err) {
       console.error(err)
       alert("Error submitting exam")
       setSubmitting(false)
     }
+  }, [answers, proctorEvents, quizId, router]);
+
+  // Timer logic
+  useEffect(() => {
+    if (timeLeft === null || submitting) return;
+
+    if (timeLeft <= 0) {
+      handleSubmit(true);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, submitting, handleSubmit]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleAnswerChange = (questionId: string, value: string) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: value
+    }))
   }
+
+  const handleManualSubmit = () => handleSubmit(false);
 
   if (loading) {
     return <div className="p-8 text-center">Preparing secure exam environment...</div>
@@ -129,11 +157,16 @@ export default function TakeExamPage() {
           <h1 className="text-3xl font-bold">{quiz.title}</h1>
           {quiz.description && <p className="text-muted-foreground mt-2">{quiz.description}</p>}
         </div>
-        <div className="text-right">
-          <Button onClick={handleSubmit} disabled={submitting}>
+        <div className="text-right flex flex-col items-end gap-2">
+          {timeLeft !== null && (
+            <div className={`text-lg font-mono font-bold px-3 py-1 rounded border ${timeLeft < 60 ? 'bg-red-100 text-red-700 border-red-300 animate-pulse' : 'bg-muted border-border'}`}>
+              ⏱️ {formatTime(timeLeft)}
+            </div>
+          )}
+          <Button onClick={handleManualSubmit} disabled={submitting}>
             {submitting ? "Submitting..." : "Submit Exam"}
           </Button>
-          <div className="text-xs text-destructive mt-2 font-semibold">
+          <div className="text-xs text-destructive font-semibold">
             SECURE MODE ACTIVE
           </div>
         </div>
@@ -190,7 +223,7 @@ export default function TakeExamPage() {
       </div>
       
       <div className="mt-8 flex justify-end">
-        <Button size="lg" onClick={handleSubmit} disabled={submitting}>
+        <Button size="lg" onClick={handleManualSubmit} disabled={submitting}>
           {submitting ? "Submitting..." : "Submit Exam"}
         </Button>
       </div>
