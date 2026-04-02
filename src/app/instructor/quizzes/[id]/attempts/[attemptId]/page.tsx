@@ -31,7 +31,7 @@ export default async function AttemptDetailsPage({
         }
       },
       answers: {
-        include: { selectedOption: true }
+        include: { selectedOption: true, question: true }
       },
       proctorLogs: {
         orderBy: { timestamp: 'asc' }
