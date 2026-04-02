@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -29,8 +29,10 @@ type QuestionType = {
   options: OptionType[];
 }
 
-export default function QuizEditorPage({ params }: { params: { id: string } }) {
+export default function QuizEditorPage() {
   const router = useRouter()
+  const params = useParams()
+  const quizId = params.id as string
   const [questions, setQuestions] = useState<QuestionType[]>([])
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -41,7 +43,7 @@ export default function QuizEditorPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     async function fetchQuiz() {
       try {
-        const res = await fetch(`/api/quizzes/${params.id}`)
+        const res = await fetch(`/api/quizzes/${quizId}`)
         if (!res.ok) throw new Error("Failed to fetch")
         const data = await res.json()
         
@@ -56,13 +58,13 @@ export default function QuizEditorPage({ params }: { params: { id: string } }) {
         setLoading(false)
       }
     }
-    fetchQuiz()
-  }, [params.id])
+    if (quizId) fetchQuiz()
+  }, [quizId])
 
   const saveQuiz = async (publishState: boolean) => {
     setSaving(true)
     try {
-      const res = await fetch(`/api/quizzes/${params.id}`, {
+      const res = await fetch(`/api/quizzes/${quizId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
