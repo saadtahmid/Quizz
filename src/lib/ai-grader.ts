@@ -14,8 +14,6 @@ export async function autoGradeTextAnswer(
   studentAnswer: string,
   maxPoints: number
 ) {
-  const modelName = process.env.AI_MODEL || 'llama3';
-
   // If there's no answer, return 0 automatically without bothering the AI
   if (!studentAnswer || studentAnswer.trim() === '') {
     return {
@@ -25,36 +23,70 @@ export async function autoGradeTextAnswer(
     };
   }
 
+  const modelName = process.env.AI_MODEL || 'llama3';
+  const baseUrl = process.env.AI_BASE_URL || 'http://localhost:11434/v1';
+  const apiKey = process.env.AI_API_KEY || 'local';
+
+  // We set a strict 30-second timeout so the UI never hangs indefinitely
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
   try {
-    const { text } = await generateText({
-      model: localAIProvider(modelName),
-      temperature: 0,
-      system: `
-        You are a highly precise strict academic auto-grader.
-        You MUST respond ONLY with a valid JSON object representing your grading. 
-        Do not include any markdown formatting like \`\`\`json or \`\`\`. Do not include any conversational text.
-        The JSON object must have exactly these three properties:
-        - "score": a number from 0 to ${maxPoints}
-        - "feedback": a string with 1-2 sentences of professional feedback explaining the score
-        - "isCorrect": a boolean (true if the student's answer is mostly/fully correct, otherwise false)
-      `,
-      prompt: `
-        Question: "${question}"
-        Maximum Points Possible: ${maxPoints}
-        Student's Answer: "${studentAnswer}"
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: modelName,
+        temperature: 0,
+        max_tokens: 500, // Hard stop after 500 tokens to prevent infinite loops
+        response_format: { type: "json_object" }, // Force OpenAI compat endpoints to return JSON
+        messages: [
+          {
+            role: "system",
+            content: `
+              You are a highly precise strict academic auto-grader.
+              You MUST respond ONLY with a valid JSON object. 
+              The JSON object must have exactly these three properties:
+              - "score": a number from 0 to ${maxPoints}
+              - "feedback": a string with 1-2 sentences of professional feedback explaining the score
+              - "isCorrect": a boolean (true if the student's answer is mostly/fully correct, otherwise false)
+            `
+          },
+          {
+            role: "user",
+            content: `
+              Question: "${question}"
+              Maximum Points Possible: ${maxPoints}
+              Student's Answer: "${studentAnswer}"
 
-        Task: Analyze the student's answer against the question.
-        - Grade it strictly and fairly based ONLY on accuracy.
-        - Determine if it is fully correct, partially correct, or incorrect.
-        - Provide a brief, professional feedback explanation for the student.
-        - Calculate the exact score out of ${maxPoints}.
-      `,
+              Task: Analyze the student's answer against the question.
+              - Grade it strictly and fairly based ONLY on accuracy.
+              - Determine if it is fully correct, partially correct, or incorrect.
+              - Provide a brief, professional feedback explanation for the student.
+              - Calculate the exact score out of ${maxPoints}.
+            `
+          }
+        ]
+      })
     });
-    
-    let object: any = null;
-    let jsonString = text.trim();
 
-    // 1. First, try to just parse the whole thing (in case it's pure JSON)
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`AI API Error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const aiText = data.choices[0]?.message?.content || "{}";
+
+    let object: any = null;
+    let jsonString = aiText.trim();
+
+    // Aggressive JSON extraction fallback (in case response_format is ignored by local models)
     if (jsonString.startsWith('```json')) {
       jsonString = jsonString.replace(/^```json/, '').replace(/```$/, '').trim();
     } else if (jsonString.startsWith('```')) {
@@ -64,34 +96,25 @@ export async function autoGradeTextAnswer(
     try {
       object = JSON.parse(jsonString);
     } catch (e) {
-      // 2. If it fails, the model might have output conversational text or <think> tags.
-      // Use a regex to find all potential JSON objects { ... } and try to parse them
-      const jsonMatches = text.match(/\{[\s\S]*?\}/g);
+      const jsonMatches = aiText.match(/\{[\s\S]*?\}/g);
       if (jsonMatches) {
         for (const match of jsonMatches) {
           try {
             const parsed = JSON.parse(match);
-            // Verify it has at least one of our expected keys
             if (parsed && (parsed.score !== undefined || parsed.feedback !== undefined || parsed.isCorrect !== undefined)) {
               object = parsed;
-              break; // Found a valid JSON object matching our schema
+              break;
             }
-          } catch (err) {
-            // Not a valid JSON block, try the next one
-          }
+          } catch (err) { /* ignore */ }
         }
       }
     }
 
     if (!object) {
-      throw new Error(`Failed to parse any valid JSON from model output. Raw output was: ${text}`);
+      throw new Error(`Failed to parse any valid JSON from model output. Raw output was: ${aiText}`);
     }
 
-    //print the question, student answer, and raw AI response for debugging
-    console.log(`[AI_GRADER] Question: ${question}`);
-    console.log(`[AI_GRADER] Student Answer: ${studentAnswer}`);
-    console.log(`[AI_GRADER] Model Used: ${modelName}`);
-    console.log(`[AI_GRADER] Raw response from AI:`, object);
+    console.log(`[AI_GRADER] Success! Given score: ${object.score}`);
     
     return {
       score: Number(object.score) || 0,
@@ -99,11 +122,11 @@ export async function autoGradeTextAnswer(
       isCorrect: Boolean(object.isCorrect)
     };
   } catch (error) {
+    clearTimeout(timeoutId);
     console.error("[AI_GRADER_ERROR]", error);
-    // Safe fallback if the local AI isn't running or times out
     return {
       score: 0,
-      feedback: "AI Grading Failed (Server Offline or Timeout). Awaiting Instructor Manual Review.",
+      feedback: "AI Grading Failed (Server Offline, Timeout, or Bad Output). Awaiting Instructor Manual Review.",
       isCorrect: false
     };
   }
