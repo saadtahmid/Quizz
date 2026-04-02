@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+ # STEM Quiz Platform
 
-## Getting Started
+A highly customizable, self-hosted assessment platform designed specifically for STEM education. This application provides an instructor dashboard for crafting complex technical questions and a secure student portal with built-in exam integrity features.
 
-First, run the development server:
+## 🚀 Key Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### 👨‍🏫 Instructor Dashboard
+* **Question Bank Management:** Create, edit, and categorize questions by topic and difficulty.
+* **Dual Question Formats:** Support for Multiple Choice Questions (MCQs) and Direct Text (open-ended) answers.
+* **STEM-Ready Rendering:** Native support for LaTeX mathematical notation (via KaTeX/MathJax) in both questions and answer choices.
+* **Analytics & Grading:** Centralized hub to review student performance and override auto-graded scores.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 🎓 Student Portal & Exam Integrity
+* **Client-Side Proctoring:** Utilizes the Page Visibility API to detect and log tab-switching or window-blur events.
+* **Algorithmic Security:** Dynamic question shuffling and randomized MCQ option orders to mitigate answer sharing.
+* **Focus Mode:** Disables context menus, text selection, and common copy/paste keyboard shortcuts during an active assessment.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 🤖 Local AI Auto-Grading (Optional Module)
+* **Semantic Analysis:** Routes direct text answers to a local LLM for "first-pass" grading against a predefined rubric.
+* **GPU Accelerated:** Optimized to run locally on Ubuntu using frameworks like Ollama or vLLM to ensure student data privacy and zero API costs.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🛠️ Architecture & Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+*(Note: Update this section based on your specific framework choices)*
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 💻 Local Development Setup
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Prerequisites
+* Node.js (v18+)
+* Git
+* *For AI Auto-grading only:* Ubuntu environment with NVIDIA drivers configured for local GPU inference (e.g., RTX 5060 Ti or better).
+
