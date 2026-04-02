@@ -14,7 +14,7 @@ export async function autoGradeTextAnswer(
   }
 
   const modelName = process.env.AI_MODEL || 'llama3';
-  const baseUrl = process.env.AI_BASE_URL || 'http://localhost:11434/api';
+  const baseUrl = process.env.AI_BASE_URL || 'http://localhost:11434';
   const apiKey = process.env.AI_API_KEY || 'local';
 
   // We set a strict 30-second timeout so the UI never hangs indefinitely
@@ -22,7 +22,7 @@ export async function autoGradeTextAnswer(
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const response = await fetch(`${baseUrl}/chat`, {
+    const response = await fetch(`${baseUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
