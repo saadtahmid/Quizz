@@ -162,7 +162,7 @@ export default function StudentQuizPage() {
                         return (
                           <div key={opt.id} className={`p-4 rounded-md border ${borderClass} flex items-center justify-between`}>
                             <div>
-                              {opt.mathEnabled ? <MathText content={opt.text} /> : <span>{opt.text}</span>}
+                              {q.mathEnabled || opt.mathEnabled ? <MathText content={opt.text} /> : <span>{opt.text}</span>}
                             </div>
                             <div className="flex gap-2">
                               {isSelected && <span className="text-xs font-bold bg-background border px-2 py-1 rounded">Your Answer</span>}

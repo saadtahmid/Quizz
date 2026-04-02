@@ -167,7 +167,7 @@ export default function TakeExamPage() {
                     <div key={o.id} className="flex items-start space-x-3 border p-4 rounded-md hover:bg-muted/50 cursor-pointer" onClick={() => handleAnswerChange(q.id, o.id)}>
                       <RadioGroupItem value={o.id} id={o.id} className="mt-1" />
                       <Label htmlFor={o.id} className="font-normal text-base w-full cursor-pointer leading-snug">
-                        {o.mathEnabled ? (
+                        {q.mathEnabled || o.mathEnabled ? (
                           <MathText content={o.text} />
                         ) : (
                           o.text
