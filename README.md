@@ -37,16 +37,62 @@ Instructors can bulk import questions into a quiz using a CSV file. A template i
 
 ## 🛠️ Architecture & Tech Stack
 
-*(Note: Update this section based on your specific framework choices)*
+This project is built using a modern full-stack web architecture with a focus on performance, type safety, and great developer experience:
 
-
+* **Framework:** [Next.js 16](https://nextjs.org/) (App Router)
+* **Language:** [TypeScript](https://www.typescriptlang.org/)
+* **Database & ORM:** [Prisma ORM](https://www.prisma.io/) with a PostgreSQL database
+* **Authentication:** [NextAuth.js v5 (Auth.js)](https://authjs.dev/) for secure user/instructor login
+* **Styling & UI:** [Tailwind CSS v4](https://tailwindcss.com/) alongside [shadcn/ui](https://ui.shadcn.com/) components
+* **STEM Formatting:** `react-markdown`, `remark-math`, and `rehype-katex` for parsing and rendering complex LaTeX mathematical notations safely.
+* **Client-Side CSV Parsing:** `papaparse` for fast browser-side ingestion of question banks.
+* **AI Evaluation (Optional):** Vercel AI SDK integrating with local models (e.g., Ollama) for text answer auto-grading.
 
 ---
 
 ## 💻 Local Development Setup
 
 ### Prerequisites
-* Node.js (v18+)
-* Git
-* *For AI Auto-grading only:* Ubuntu environment with NVIDIA drivers configured for local GPU inference (e.g., RTX 5060 Ti or better).
+* [Node.js](https://nodejs.org/) (v18+)
+* [Git](https://git-scm.com/)
+* A running [PostgreSQL](https://www.postgresql.org/) database
+* *For AI Auto-grading only:* Ubuntu environment with NVIDIA drivers configured for local GPU inference (e.g., RTX 5060 Ti or better) running an Ollama instance.
+
+### Installation & Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/saadtahmid/Quizz.git
+   cd Quizz
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables:**
+   Create a `.env` file in the root directory. 
+   ```env
+   # Database connection string
+   DATABASE_URL="postgresql://root:password@localhost:5432/quiz_db?schema=public"
+
+   # NextAuth Secret
+   AUTH_SECRET="your-super-secret-key-here"
+   AUTH_TRUST_HOST=true
+   ```
+
+4. **Initialize the Database:**
+   Apply Prisma schema to create the required tables in your database:
+   ```bash
+   npx prisma db push
+   ```
+
+5. **Start the Development Server:**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open the Application:**
+   Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
 
