@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -31,8 +31,60 @@ type QuestionType = {
 
 export default function QuizEditorPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  // Mock data setup, typically fetched from the server.
   const [questions, setQuestions] = useState<QuestionType[]>([])
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [isPublished, setIsPublished] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    async function fetchQuiz() {
+      try {
+        const res = await fetch(`/api/quizzes/${params.id}`)
+        if (!res.ok) throw new Error("Failed to fetch")
+        const data = await res.json()
+        
+        setTitle(data.title)
+        setDescription(data.description || "")
+        setIsPublished(data.isPublished)
+        setQuestions(data.questions || [])
+      } catch (error) {
+        console.error(error)
+        alert("Failed to load quiz")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchQuiz()
+  }, [params.id])
+
+  const saveQuiz = async (publishState: boolean) => {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/quizzes/${params.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description,
+          isPublished: publishState,
+          questions
+        })
+      })
+
+      if (!res.ok) throw new Error("Failed to save")
+      
+      setIsPublished(publishState)
+      router.refresh()
+      alert(publishState ? "Quiz Published!" : "Draft Saved!")
+    } catch (error) {
+      console.error(error)
+      alert("Failed to save quiz")
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const addQuestion = () => {
     setQuestions([
@@ -92,6 +144,10 @@ export default function QuizEditorPage({ params }: { params: { id: string } }) {
     }))
   }
 
+  if (loading) {
+    return <div className="p-8 text-center">Loading quiz data...</div>
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-8">
       <div className="flex justify-between items-center mb-8">
@@ -100,12 +156,33 @@ export default function QuizEditorPage({ params }: { params: { id: string } }) {
             &larr; Back to Dashboard
           </Button>
           <h1 className="text-3xl font-bold">Edit Quiz</h1>
+          <p className="text-muted-foreground mt-1">Status: {isPublished ? '🟢 Published' : '🟡 Draft'}</p>
         </div>
         <div className="flex gap-4">
-          <Button variant="outline">Save Draft</Button>
-          <Button>Publish</Button>
+          <Button variant="outline" onClick={() => saveQuiz(false)} disabled={saving}>
+            {saving && !isPublished ? "Saving..." : "Save Draft"}
+          </Button>
+          <Button onClick={() => saveQuiz(true)} disabled={saving}>
+            {saving && isPublished ? "Publishing..." : "Publish"}
+          </Button>
         </div>
       </div>
+
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Quiz Details</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div>
+            <Label>Title</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div>
+            <Label>Description</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="flex flex-col gap-6">
         {questions.map((q, index) => (
