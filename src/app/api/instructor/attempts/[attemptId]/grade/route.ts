@@ -20,6 +20,9 @@ export async function POST(req: Request, context: { params: Promise<{ attemptId:
       // Ignore empty body
     }
     const scores = body?.scores || {};
+    // Optional per-answer feedback, keyed by answer id. Populated when an
+    // instructor imports an LLM evaluation, but also editable in the UI.
+    const feedback = body?.feedback || {};
 
     const attempt = await prisma.attempt.findUnique({
       where: { id: attemptId },
@@ -39,14 +42,19 @@ export async function POST(req: Request, context: { params: Promise<{ attemptId:
     for (const answer of attempt.answers) {
       if (answer.question.type === "TEXT") {
         const providedScore = scores[answer.id];
-        
+        const providedFeedback = feedback[answer.id];
+
         if (typeof providedScore === "number") {
           await prisma.answer.update({
             where: { id: answer.id },
             data: {
               isCorrect: providedScore > 0 && providedScore === answer.question.points,
               manualScore: providedScore,
-              aiFeedback: null // clear out any old AI feedback just in case
+              // Persist provided feedback; otherwise keep whatever was there.
+              aiFeedback:
+                typeof providedFeedback === "string"
+                  ? providedFeedback
+                  : answer.aiFeedback
             }
           });
           additionalScore += providedScore;
